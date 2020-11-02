@@ -186,14 +186,10 @@ while ((i1 < disks)); do
 			printfb_info "Adding partition $((i2-1)) to disk $((i1-1)) code."
 			pcc="${pcc}${var}"
 			i3=0
-			echo "Filling free space... 0%"
-			while ((i3 < $((${PartitionSize[$((i2-1))]}-${#var}-1)))); do
-				i3="$(($i3+1))"
-				echo -e "\e[1A\e[KFilling free space... $(($((i3*100))/$((${PartitionSize[$((i2-1))]}-${#var}-1))))%"
-				pcc="${pcc}X"
-			done
-			pcc="${pcc};"
-			echo -e "\e[1A\e[KFilling free space... 100%"
+			echo "Filling free space..."
+			len="$((${PartitionSize[$((i2-1))]}-${#var}-1))" ch='X'
+			free="$(printf '%*s' "$len" | tr ' ' "$ch")"
+			pcc="${pcc}${free};"
 			echo
 			success "Added partition $((i2-1)) to disk $((i1-1)) code."
 		done
@@ -204,15 +200,11 @@ while ((i1 < disks)); do
 		else
 			abortfb "'project.conf' is wrongly configured. (invalid DiskBootable value for disk $((i1-1)))" 1
 		fi
-		echo "Filling free space on disk $((i1-1))... 0%"
+		echo "Filling free space on disk $((i1-1))..."
 		i3=0
-		while ((i3 < $remaining)); do
-			i3="$(($i3+1))"
-			echo -e "\e[1A\e[KFilling free space on disk $((i1-1))... $(($((i3*100))/remaining))%"
-			pcc="${pcc}X"
-		done
-			pcc="${pcc};"
-			echo -e "\e[1A\e[KFilling free space on disk $((i1-1))... 100%"
+		len="$remaining" ch='X'
+		free="$(printf '%*s' "$len" | tr ' ' "$ch")"
+		pcc="${pcc}${free}"
 		pcc="${pcc}+/"
 		success "Added disk $((i1-1)) to the PC code."
 	else
