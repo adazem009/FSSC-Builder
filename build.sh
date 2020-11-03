@@ -49,6 +49,7 @@ setup_files()
 				IFS=$'\r\n' GLOBIGNORE='*' command eval  'list=($(cat "${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"))'
 				echo "Adding file ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"
 				encode
+				temp0='$'
 				FSSC[${#FSSC[@]}]="${temp0}file;${partfiles[$((i5-1))]};${var};"
 			fi
 		done
