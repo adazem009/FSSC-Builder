@@ -42,6 +42,14 @@ setup_files()
 		while ((i5 < ${#partfiles[@]})); do
 			i5="$(($i5+1))"
 			if [ -d "${partfiles[$((i5-1))]}" ]; then
+				echo "Adding directory ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"
+				findatt "$(remdot ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]})"
+				if [[ "$att" == '' ]]; then
+					printfb_info "${RED}File attributes are not set!${NC} Using defaults."
+					ins=$((ins+1))
+					att="rw-rw-rw-;root;root;"
+				fi
+				echo "Attributes: $att"
 				temp0='$'
 				FSSC[${#FSSC[@]}]="${temp0}folder;${partfiles[$((i5-1))]};;"
 			else
@@ -49,9 +57,17 @@ setup_files()
 				IFS=$'\r\n' GLOBIGNORE='*' command eval  'list=($(cat "${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"))'
 				echo "Adding file ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"
 				encode
+				findatt "$(remdot ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]})"
+				if [[ "$att" == '' ]]; then
+					printfb_info "${RED}File attributes are not set!${NC} Using defaults."
+					ins=$((ins+1))
+					att="rwxrwxrwx;root;root;"
+				fi
+				echo "Attributes: $att"
 				temp0='$'
-				FSSC[${#FSSC[@]}]="${temp0}file;${partfiles[$((i5-1))]};${var};"
+				FSSC[${#FSSC[@]}]="${temp0}file;${partfiles[$((i5-1))]};${var};$att"
 			fi
+			echo
 		done
 	done
 }
@@ -102,6 +118,30 @@ partfiles()
 		fi
 	done
 }
+remdot()
+{
+	local i6=1
+	local nodot=""
+	local dotstring="$1"
+	while ((i6 < ${#dotstring})); do
+		i6=$((i6+1))
+		nodot="${nodot}${dotstring:$((i6-1)):1}"
+	done
+	echo $nodot
+}
+findatt()
+{
+	local i6=0
+	local attpath="$1"
+	att=""
+	while ((i6 < ${#attpath})); do
+		i6=$((i6+1))
+		if [[ "${fattn[$((i6-1))]}" == "$attpath" ]]; then
+			att="${fatt[$((i6-1))]}"
+			break
+		fi
+	done
+}
 # Init
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -109,6 +149,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 characters='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~`!$^&*()-_=+[]/;:",.<>?\|%{}'
 characters="${characters}'#@ °€"
+ins=0
 printfb_info "Welcome to FSSC Builder by adazem009."
 echo
 # Get disk count
@@ -136,8 +177,8 @@ while ((i1 < disks)); do
 	if test -f "${DiskConfig[$(($i1-1))]}"; then
 		source "${DiskConfig[$(($i1-1))]}"
 		# Check for errors
-		tmp="$((${#PartitionName[@]}+${#PartitionSize[@]}+${#PartitionContent[@]}))"
-		tmp="$(echo "scale=2;${tmp}/3" | bc)"
+		tmp="$((${#PartitionName[@]}+${#PartitionSize[@]}+${#PartitionContent[@]}+${#PartitionAttributes[@]}))"
+		tmp="$(echo "scale=2;${tmp}/4" | bc)"
 		if (( $(echo "$tmp != ${#PartitionName[@]}" | bc) )); then
 			abortfb "'${DiskConfig[$(($i1-1))]}' is wrongly configured." 3
 		fi
@@ -163,6 +204,11 @@ while ((i1 < disks)); do
 			if ! [ -d "${PartitionContent[$((i2-1))]}" ]; then
 				abortfb "Directory '${PartitionContent[$((i2-1))]}' does not exist."
 			fi
+			if ! [ -f "${PartitionAttributes[$((i2-1))]}" ]; then
+				abortfb "File '${PartitionAttributes[$((i2-1))]}' does not exist."
+			fi
+			chmod +x "${PartitionAttributes[$((i2-1))]}"
+			source "${PartitionAttributes[$((i2-1))]}"
 			printfb_info "Building filesystem."
 			FSSC=()
 			FSSC[0]="tFSSC"
@@ -193,6 +239,7 @@ while ((i1 < disks)); do
 			pcc="${pcc}${free};"
 			echo
 			success "Added partition $((i2-1)) to disk $((i1-1)) code."
+			echo
 		done
 		if [[ "${DiskBootable[$(($i1-1))]}" = "true" ]]; then
 			pcc="${pcc}b;"
@@ -208,6 +255,7 @@ while ((i1 < disks)); do
 		pcc="${pcc}${free}"
 		pcc="${pcc}+/"
 		success "Added disk $((i1-1)) to the PC code."
+		echo && echo
 	else
 		abortfb "Couldn't open ${DiskConfig[$(($i1-1))]}." 2
 	fi
@@ -215,3 +263,15 @@ done
 printfb_info "Writing the output to ${GREEN}output.fssc${NC}"
 echo $pcc > ./output.fssc
 success "Done!"
+if ((ins > 0)); then
+	if ((ins > 1)); then
+		temp0="s"
+		temp1="don't"
+		temp2="They"
+	else
+		temp0=""
+		temp1="doesn't"
+		temp2="It"
+	fi
+	printfb_info "The build succeeded, but $ins file$temp0 $temp1 have attributes defined. ${temp2}'ll be ${RED}world-writable${NC}."
+fi
