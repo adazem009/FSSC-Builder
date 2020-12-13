@@ -1,8 +1,0 @@
-### DO NOT REMOVE THE FIRST LINES ###
-fattn=()
-fatt=()
-###
-### c/
-# /cowsay.smc
-fattn[${#fattn[@]}]="/cowsay.smc"
-fatt[${#fatt[@]}]="rwxrwxr-x;root;root;"
