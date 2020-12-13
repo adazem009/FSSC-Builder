@@ -35,8 +35,10 @@ Assuming that you placed your disk config file in **config/disk1.conf**, you can
 PartitionName[0]="name"
 PartitionSize[0]=size
 PartitionContent[0]="content"
+PartitionAttributes[0]="attributes"
 ```
 Replace **0** with the partition number. Again, it starts with 0. Then, replace **name** with the partition name, **size** with the partition size and **content** with the path to your files that you want to be on this partition. In my case, it's **content/d0part0**. You can choose any name here.
+Replace **attributes** with the path to your partition's attributes config file. See **content/d0part0.list** and **content/d0part1.list** for more info.
 
 ## Building FSSC
 After you set up your disks, just run **build.sh**.
