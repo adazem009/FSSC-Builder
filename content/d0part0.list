@@ -1,0 +1,11 @@
+### DO NOT REMOVE THE FIRST LINES ###
+fattn=()
+fatt=()
+###
+### c/
+# /boot.smc
+fattn[${#fattn[@]}]="/boot.smc"
+fatt[${#fatt[@]}]="rwxrwxr--;root;root;"
+# /credits.txt
+fattn[${#fattn[@]}]="/credits.txt"
+fatt[${#fatt[@]}]="rw-rw-r--;root;root;"
