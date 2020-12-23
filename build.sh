@@ -134,7 +134,7 @@ findatt()
 	local i6=0
 	local attpath="$1"
 	att=""
-	while ((i6 < ${#attpath})); do
+	while ((i6 < ${#fattn[@]})); do
 		i6=$((i6+1))
 		if [[ "${fattn[$((i6-1))]}" == "$attpath" ]]; then
 			att="${fatt[$((i6-1))]}"
