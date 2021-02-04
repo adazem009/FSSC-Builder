@@ -37,7 +37,8 @@ setup_files()
 		if [[ "${dirs[$((i4-1))]}" = "." ]]; then
 			cd="/"
 		fi
-		FSSC[${#FSSC[@]}]="c$cd"
+		FSSC[${#FSSC[@]}]="$cd"
+		FSSC[${#FSSC[@]}]="${#partfiles[@]}"
 		i5=0
 		while ((i5 < ${#partfiles[@]})); do
 			i5="$(($i5+1))"
@@ -50,8 +51,10 @@ setup_files()
 					att="rw-rw-rw-;root;root;"
 				fi
 				echo "Attributes: $att"
-				temp0='$'
-				FSSC[${#FSSC[@]}]="${temp0}folder;${partfiles[$((i5-1))]};;"
+				getatt "$att"
+				FSSC[${#FSSC[@]}]=0
+				FSSC[${#FSSC[@]}]="${partfiles[$((i5-1))]}"
+				FSSC[${#FSSC[@]}]=""
 			else
 				list=()
 				IFS=$'\r\n' GLOBIGNORE='*' command eval  'list=($(cat "${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"))'
@@ -64,47 +67,65 @@ setup_files()
 					att="rwxrwxrwx;root;root;"
 				fi
 				echo "Attributes: $att"
-				temp0='$'
-				FSSC[${#FSSC[@]}]="${temp0}file;${partfiles[$((i5-1))]};${var};$att"
+				getatt "$att"
+				FSSC[${#FSSC[@]}]=1
+				FSSC[${#FSSC[@]}]="${partfiles[$((i5-1))]}"
+				FSSC[${#FSSC[@]}]="$var"
 			fi
+			FSSC[${#FSSC[@]}]="$permissions"
+			FSSC[${#FSSC[@]}]="$owner"
+			FSSC[${#FSSC[@]}]="$group"
+			FSSC[${#FSSC[@]}]="$attributes"
 			echo
 		done
 	done
 }
 encode()
 {
-	echo "Encoding... 0%"
-	temp="${list[*]}"
-	tempi=0
+	echo "Converting... 0%"
 	var=""
-	item=0
-	while ((item < ${#list[@]})); do
-		item="$(($item+1))"
-		letter=0
-		tempi1=0
-		while ((tempi1 < ${#list[$((item-1))]})); do
-			tempi1="$(($tempi1+1))"
-			tempi="$(($tempi+1))"
-			letter="$(($letter+1))"
-			symbol=1
-			until [[ "${characters:$((symbol-1)):1}" = "${list[$((item-1))]:$((letter-1)):1}" ]] || ((symbol > ${#characters})); do
-				symbol="$(($symbol+1))"
-			done
-			if ((symbol <= ${#characters})); then
-				if ((${#symbol} < 2)); then
-					symbol="0${symbol}"
-				fi
-				if [[ "${list[$((item-1))]:$((letter-1)):1}" = ' ' ]]; then
-					symbol=95
-				fi
-				var="${var}${symbol:0:1}${symbol:1:1}"
-			fi
-			echo -e "\e[1A\e[KEncoding... $(($((tempi*100))/${#temp}))%"
-		done
-		tempi1="$(($tempi1+1))"
-		var="${var}00"
+	local line=""
+	local len=0
+	local ci=0
+	while (( ci < ${#list[@]} )); do
+		ci=$((ci+1))
+		echo -e "\e[1A\e[KConverting... $(($((ci*100))/${#list[@]}))%"
+		line="${list[$((ci-1))]}"
+		len=${#line}
+		var="${var}${len};${line}"
 	done
-	echo -e "\e[1A\e[KEncoding... 100%"
+	#echo "Encoding... 0%"
+	#temp="${list[*]}"
+	#tempi=0
+	#var=""
+	#item=0
+	#while ((item < ${#list[@]})); do
+	#	item="$(($item+1))"
+	#	letter=0
+	#	tempi1=0
+	#	while ((tempi1 < ${#list[$((item-1))]})); do
+	#		tempi1="$(($tempi1+1))"
+	#		tempi="$(($tempi+1))"
+	#		letter="$(($letter+1))"
+	#		symbol=1
+	#		until [[ "${characters:$((symbol-1)):1}" = "${list[$((item-1))]:$((letter-1)):1}" ]] || ((symbol > ${#characters})); do
+	#			symbol="$(($symbol+1))"
+	#		done
+	#		if ((symbol <= ${#characters})); then
+	#			if ((${#symbol} < 2)); then
+	#				symbol="0${symbol}"
+	#			fi
+	#			if [[ "${list[$((item-1))]:$((letter-1)):1}" = ' ' ]]; then
+	#				symbol=95
+	#			fi
+	#			var="${var}${symbol:0:1}${symbol:1:1}"
+	#		fi
+	#		echo -e "\e[1A\e[KEncoding... $(($((tempi*100))/${#temp}))%"
+	#	done
+	#	tempi1="$(($tempi1+1))"
+	#	var="${var}00"
+	#done
+	#echo -e "\e[1A\e[KEncoding... 100%"
 }
 partfiles()
 {
@@ -142,6 +163,26 @@ findatt()
 		fi
 	done
 }
+getatt()
+{
+	local gi=0
+	local catt="$1"
+	local sep=()
+	local tmp=""
+	while (( gi < ${#catt} )); do
+		gi=$((gi+1))
+		if [[ "${catt:$((gi-1)):1}" = ";" ]]; then
+			sep[${#sep[@]}]="$tmp"
+			tmp=""
+		else
+			tmp="${tmp}${catt:$((gi-1)):1}"
+		fi
+	done
+	permissions="${sep[0]}"
+	owner="${sep[1]}"
+	group="${sep[2]}"
+	attributes="${sep[3]}"
+}
 # Init
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -152,114 +193,78 @@ characters="${characters}'#@ °€"
 ins=0
 printfb_info "Welcome to FSSC Builder by adazem009."
 echo
-# Get disk count
 printfb_info "Reading project configuration."
 source ./project.conf
-disks=${#DiskName[@]}
-# Check for errors
-tmp="$((${#DiskName[@]}+${#DiskSize[@]}+${#DiskConfig[@]}+${#DiskBootable[@]}))"
-tmp="$(echo "scale=2;${tmp}/4" | bc)"
-if (( $(echo "$tmp != $disks" | bc) )); then
-	abortfb "'project.conf' is wrongly configured." 1
-fi
-printfb_info "Found ${disks} disk(s)."
 echo
-# Set up disks
 pcc=""
 DiskContent=()
-i1=0
-while ((i1 < disks)); do
-	i1="$(($i1+1))"
-	DiskContent[$(($i1-1))]=""
-	# Set up disk i1-1
-	printfb_info "Setting up disk $((i1-1))."
-	# Check for errors
-	if test -f "${DiskConfig[$(($i1-1))]}"; then
-		source "${DiskConfig[$(($i1-1))]}"
-		# Check for errors
-		tmp="$((${#PartitionName[@]}+${#PartitionSize[@]}+${#PartitionContent[@]}+${#PartitionAttributes[@]}))"
-		tmp="$(echo "scale=2;${tmp}/4" | bc)"
-		if (( $(echo "$tmp != ${#PartitionName[@]}" | bc) )); then
-			abortfb "'${DiskConfig[$(($i1-1))]}' is wrongly configured." 3
-		fi
-		printfb_info "Found ${#PartitionName[@]} partition(s) on disk $((i1-1))."
-		remaining=$((${DiskSize[$(($i1-1))]}-7))
-		partitions=()
-		echo
-		pcc="${pcc}${DiskName[$(($i1-1))]}+${DiskSize[$(($i1-1))]}+FPT;"
-		ptc=""
-		i2=0
-		while ((i2 < ${#PartitionName[@]})); do
-			i2="$(($i2+1))"
-			if ((${PartitionSize[$((i2-1))]} < $(($((6+${#PartitionName[$((i2-1))]}))*2)))); then
-				abortfb "Partition $((i2-1)) on disk $((i1-1)) is too small." 4
-			fi
-			tmp1=${PartitionSize[$((i2-1))]}
-			tmp2=$((${DiskSize[$((i1-1))]}-7))
-			if ((tmp1 > tmp2)); then
-				abortfb "Partition $((i2-1)) on disk $((i1-1)) is too large." 4
-			fi
-			# Set up partition i2-1 on disk i1-1
-			printfb_info "Setting up partition $((i2-1)) on disk $((i1-1))."
-			if ! [ -d "${PartitionContent[$((i2-1))]}" ]; then
-				abortfb "Directory '${PartitionContent[$((i2-1))]}' does not exist."
-			fi
-			if ! [ -f "${PartitionAttributes[$((i2-1))]}" ]; then
-				abortfb "File '${PartitionAttributes[$((i2-1))]}' does not exist."
-			fi
-			chmod +x "${PartitionAttributes[$((i2-1))]}"
-			source "${PartitionAttributes[$((i2-1))]}"
-			printfb_info "Building filesystem."
-			FSSC=()
-			FSSC[0]="tFSSC"
-			FSSC[1]="n${PartitionName[$((i2-1))]}"
-			setup_files
-			cd "$oldcd"
-			list=()
-			list=("${FSSC[@]}")
-			echo -e "${YELLOW}Encoding filesystem...${NC}"
-			encode
-			if (($((${PartitionSize[$((i2-1))]} > remaining)))); then
-				abortfb "Partition $((i2-1)) on disk $((i1-1)) is too large." 4
-			fi
-			echo "Filesystem size: ${#var} B"
-			if ((${#var} > ${PartitionSize[$((i2-1))]})); then
-				abortfb "Partition $((i2-1)) on disk $((i1-1)) has too large filesystem." 5
-			fi
-			remaining=$(($remaining-$((${PartitionSize[$((i2-1))]}))))
-			echo "Remaining space on disk: ${remaining} B"
-			partitions[${#partitions[@]}]="$var"
-			success "Set up partition $((i2-1)) on disk $((i1-1))."
-			printfb_info "Adding partition $((i2-1)) to disk $((i1-1)) code."
-			pcc="${pcc}${var}"
-			i3=0
-			echo "Filling free space..."
-			len="$((${PartitionSize[$((i2-1))]}-${#var}-1))" ch='X'
-			free="$(printf '%*s' "$len" | tr ' ' "$ch")"
-			pcc="${pcc}${free};"
-			echo
-			success "Added partition $((i2-1)) to disk $((i1-1)) code."
-			echo
-		done
-		if [[ "${DiskBootable[$(($i1-1))]}" = "true" ]]; then
-			pcc="${pcc}b;"
-		elif [[ "${DiskBootable[$(($i1-1))]}" = "false" ]]; then
-			pcc="${pcc}n;"
-		else
-			abortfb "'project.conf' is wrongly configured. (invalid DiskBootable value for disk $((i1-1)))" 1
-		fi
-		echo "Filling free space on disk $((i1-1))..."
-		i3=0
-		len="$remaining" ch='X'
-		free="$(printf '%*s' "$len" | tr ' ' "$ch")"
-		pcc="${pcc}${free}"
-		pcc="${pcc}+/"
-		success "Added disk $((i1-1)) to the PC code."
-		echo && echo
-	else
-		abortfb "Couldn't open ${DiskConfig[$(($i1-1))]}." 2
+i1=1
+DiskContent[$(($i1-1))]=""
+# Set up disk
+printfb_info "Setting up disk..."
+printfb_info "Found ${#PartitionName[@]} partition(s)."
+remaining=$((${DiskSize}))
+partitions=()
+echo
+dname="${DiskName[$(($i1-1))]}"
+dsize="${DiskSize[$(($i1-1))]}"
+diskc="${#dname};${dname}${#dsize};${dsize}${dsize};`cat mbr`"
+ptc=""
+i2=0
+while ((i2 < ${#PartitionName[@]})); do
+	i2="$(($i2+1))"
+	if ((${PartitionSize[$((i2-1))]} < $(($((6+${#PartitionName[$((i2-1))]}))*2)))); then
+		abortfb "Partition $((i2-1)) is too small." 4
 	fi
+	tmp1=${PartitionSize[$((i2-1))]}
+	tmp2=$((${DiskSize}))
+	if ((tmp1 > tmp2)); then
+		abortfb "Partition $((i2-1)) is too large." 4
+	fi
+	# Set up partition i2-1
+	printfb_info "Setting up partition $((i2-1))."
+	if ! [ -d "${PartitionContent[$((i2-1))]}" ]; then
+		abortfb "Directory '${PartitionContent[$((i2-1))]}' does not exist."
+	fi
+	if ! [ -f "${PartitionAttributes[$((i2-1))]}" ]; then
+		abortfb "File '${PartitionAttributes[$((i2-1))]}' does not exist."
+	fi
+	chmod +x "${PartitionAttributes[$((i2-1))]}"
+	source "${PartitionAttributes[$((i2-1))]}"
+	printfb_info "Building filesystem."
+	FSSC=()
+	FSSC[0]="FSSC2" # current FSSC format string
+	setup_files
+	#printf '%s\n' "${FSSC[@]}"
+	cd "$oldcd"
+	list=()
+	list=("${FSSC[@]}")
+	echo -e "${YELLOW}Converting filesystem...${NC}"
+	encode
+	if (($((${PartitionSize[$((i2-1))]} > remaining)))); then
+		abortfb "Partition $((i2-1)) is too large." 4
+	fi
+	echo "Filesystem size: ${#var} B"
+	additional="${#pname};${pname}${#psize};${psize}${#var};${var}"
+	if ((${#var} > ${PartitionSize[$((i2-1))]})) || (( ${#additional} > ${PartitionSize[$((i2-1))]} )); then
+		abortfb "Partition $((i2-1)) has too large filesystem." 5
+	fi
+	remaining=$(($remaining-$((${PartitionSize[$((i2-1))]}))))
+	echo "Remaining space on disk: ${remaining} B"
+	partitions[${#partitions[@]}]="$var"
+	success "Set up partition $((i2-1))."
+	printfb_info "Adding partition $((i2-1))"
+	pname="${PartitionName[$((i2-1))]}"
+	psize="${PartitionSize[$((i2-1))]}"
+	diskc="${diskc}$additional"
+	i3=0
+	echo
+	success "Added partition $((i2-1))"
+	echo
 done
+pcc="${pcc}${diskc}"
+success "A media image was created."
+echo && echo
 printfb_info "Writing the output to ${GREEN}output.fssc${NC}"
 echo $pcc > ./output.fssc
 success "Done!"
