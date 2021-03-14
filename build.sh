@@ -208,7 +208,14 @@ partitions=()
 echo
 dname="${DiskName[$(($i1-1))]}"
 dsize="${DiskSize[$(($i1-1))]}"
-diskc="${#dname};${dname}${#dsize};${dsize}${dsize};`cat mbr`"
+if ! [ -f mbr ]; then
+	abortfb "The 'mbr' file does not exist." 3
+fi
+MBR=`cat mbr`
+if (( ${#MBR} != 4096 )); then
+	abortfb "The MBR size isn't 4096 bytes." 4
+fi
+diskc="${#dname};${dname}${#dsize};${dsize}${dsize};$MBR"
 ptc=""
 i2=0
 while ((i2 < ${#PartitionName[@]})); do
@@ -224,10 +231,10 @@ while ((i2 < ${#PartitionName[@]})); do
 	# Set up partition i2-1
 	printfb_info "Setting up partition $((i2-1))."
 	if ! [ -d "${PartitionContent[$((i2-1))]}" ]; then
-		abortfb "Directory '${PartitionContent[$((i2-1))]}' does not exist."
+		abortfb "Directory '${PartitionContent[$((i2-1))]}' does not exist." 3
 	fi
 	if ! [ -f "${PartitionAttributes[$((i2-1))]}" ]; then
-		abortfb "File '${PartitionAttributes[$((i2-1))]}' does not exist."
+		abortfb "File '${PartitionAttributes[$((i2-1))]}' does not exist." 3
 	fi
 	chmod +x "${PartitionAttributes[$((i2-1))]}"
 	source "${PartitionAttributes[$((i2-1))]}"
