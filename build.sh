@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- FSSC Builder ---
-# 2020 - adazem009
+# 2021 - adazem009
 #
 # Functions
 abortfb()
@@ -82,18 +82,27 @@ setup_files()
 }
 encode()
 {
-	echo "Converting... 0%"
+	if [[ "$auto" = "1" ]]; then
+		echo "Converting..."
+	else
+		echo "Converting... 0%"
+	fi
 	var=""
 	local line=""
 	local len=0
 	local ci=0
 	while (( ci < ${#list[@]} )); do
 		ci=$((ci+1))
-		echo -e "\e[1A\e[KConverting... $(($((ci*100))/${#list[@]}))%"
+		if [[ "$auto" != "1" ]]; then
+			echo -e "\e[1A\e[KConverting... $(($((ci*100))/${#list[@]}))%"
+		fi
 		line="${list[$((ci-1))]}"
 		len=${#line}
 		var="${var}${len};${line}"
 	done
+	if [[ "$auto" != "1" ]]; then
+		echo -e "\e[1A\e[KConverting... 100%"
+	fi
 	#echo "Encoding... 0%"
 	#temp="${list[*]}"
 	#tempi=0
@@ -184,10 +193,18 @@ getatt()
 	attributes="${sep[3]}"
 }
 # Init
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+auto="$1"
+if [[ "$auto" = 1 ]]; then
+	RED=''
+	GREEN=''
+	YELLOW=''
+	NC=''
+else
+	RED='\033[0;31m'
+	GREEN='\033[0;32m'
+	YELLOW='\033[1;33m'
+	NC='\033[0m'
+fi
 characters='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~`!$^&*()-_=+[]/;:",.<>?\|%{}'
 characters="${characters}'#@ °€"
 ins=0
