@@ -232,7 +232,8 @@ MBR=`cat mbr`
 if (( ${#MBR} != 4096 )); then
 	abortfb "The MBR size isn't 4096 bytes." 4
 fi
-diskc="${#dname};${dname}${#dsize};${dsize}${dsize};$MBR"
+#diskc="${#dname};${dname}${#dsize};${dsize}${dsize};$MBR"
+diskc="$MBR"
 ptc=""
 i2=0
 while ((i2 < ${#PartitionName[@]})); do
