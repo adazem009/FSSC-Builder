@@ -42,7 +42,7 @@ setup_files()
 		i5=0
 		while ((i5 < ${#partfiles[@]})); do
 			i5="$(($i5+1))"
-			if [ -d "${partfiles[$((i5-1))]}" ]; then
+			if [ -d "${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}" ]; then
 				echo "Adding directory ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]}"
 				findatt "$(remdot ${dirs[$((i4-1))]}/${partfiles[$((i5-1))]})"
 				if [[ "$att" == '' ]]; then
